@@ -3,19 +3,17 @@
 #'Load configuration parameters for DB connection
 #'This file is a tab separated txt file of the form:
 #'
-#'driver_type     VALUE
+#'driverType     VALUE
 #'
-#'driver_path     VALUE
+#'driverPath     VALUE
 #'
-#'db_user VALUE
+#'connectPath VALUE
 #'
-#'db_pass VALUE
+#'dbuser VALUE
 #'
-#'db_host VALUE
+#'dbpass VALUE
 #'
-#'db_port VALUE
-#'
-#'db_name VALUE
+#'username  VALUE
 #'
 #'@param file_path Path to the config file
 #'@return config environment for DB connection
@@ -28,7 +26,7 @@ getConfig <- function(file_path)
   if (!file.exists(file_path)) {stop(paste('Config File not found:',file_path,'does not exit'))}
   t <- read.table(file_path, sep = '\t', header = F, as.is=T)
   config <- new.env()
-  
+
   for (i in 1:nrow(t))
   {
     config[[t[i,1]]] <- t[i,2]
