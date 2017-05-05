@@ -45,15 +45,15 @@ get_cohorts_list <- function(username = NULL , only_num = FALSE, config = NULL) 
   } else {
     columns = "c.result_instance_id as num_cohorte"
   }
-  
+
 
   sql = stringr::str_interp("select distinct ${columns}
-                    FROM 
-  i2b2demodata.qt_query_master m, 
-  i2b2demodata.qt_query_instance i, 
-  i2b2demodata.qt_query_result_instance r, 
+                    FROM
+  i2b2demodata.qt_query_master m,
+  i2b2demodata.qt_query_instance i,
+  i2b2demodata.qt_query_result_instance r,
   i2b2demodata.qt_patient_set_collection c
-  
+
   WHERE
   m.user_id = '${username}' AND
   m.query_master_id = i.query_master_id AND
@@ -103,7 +103,7 @@ get_num_temp_list <- function(username = NULL, only_num = FALSE, config = NULL) 
 
 #' patients_subquery
 #' @export
-patients_subquery <- function(num_type = "num_temp") {
+patients_subquery <- function(num_type = "cohorte") {
 
   if(!(num_type %in% c('num_temp', 'cohorte'))) {
     stop('num_type must be either "num_type" or "cohorte"')
@@ -130,7 +130,7 @@ patients_subquery <- function(num_type = "num_temp") {
 
 #' get_patients
 #' @export
-get_patients <- function(num = NULL, num_type = "num_temp", only_num = FALSE, count = FALSE, config = NULL) {
+get_patients <- function(num = NULL, num_type = "cohorte", only_num = FALSE, count = FALSE, config = NULL) {
 
   if (is.null(num) | is.null(num_type)) {
     stop('valid num and num_type are required')
@@ -211,7 +211,7 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
 
 #' get_data
 #' @export
-get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config = NULL) {
+get_data <- function(num = NULL, num_type = "cohorte", data_type = NULL, config = NULL) {
 
   if (is.null(num) | is.null(num_type)) {
     stop('valid num and num_type are required')
@@ -229,9 +229,9 @@ get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config
 
   if (data_type == 'bio_num') {
 
-    sql <- stringr::str_interp("SELECT O.PATIENT_NUM, 
-    O.ENCOUNTER_NUM as IEP, 
-    O.CONCEPT_CD as CODE, 
+    sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
+    O.ENCOUNTER_NUM as IEP,
+    O.CONCEPT_CD as CODE,
     C.NAME_CHAR as CODE_LIBELLE,
     O.NVAL_NUM as VAL_NUMERIC,
     O.START_DATE as DATE_DOCUMENT,
@@ -239,7 +239,7 @@ get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config
     null as BORNE_SUP,
     null as ID_THESAURUS_DATA,
     C.NAME_CHAR as LIBELLE_PARENT,
-    O.CONCEPT_CD as CODE_PARENT, 
+    O.CONCEPT_CD as CODE_PARENT,
     VALUEFLAG_CD,
     (CASE WHEN VALUEFLAG_CD = 'L' THEN 1 ELSE 0 END) as inf,
     (CASE WHEN VALUEFLAG_CD = 'H' THEN 1 ELSE 0 END) as sup
@@ -253,9 +253,9 @@ get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config
 
   } else if (data_type == 'cim10' ) {
 
-    sql <- stringr::str_interp("SELECT O.PATIENT_NUM, 
-    O.ENCOUNTER_NUM as IEP, 
-    O.CONCEPT_CD as CODE, 
+    sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
+    O.ENCOUNTER_NUM as IEP,
+    O.CONCEPT_CD as CODE,
     C.NAME_CHAR as CODE_LIBELLE,
     O.NVAL_NUM as VAL_NUMERIC,
     O.START_DATE as DATE_DOCUMENT,
@@ -270,7 +270,7 @@ get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config
   }
 
   res <- oracleQuery(sql, config)
-  
+
   return(res)
 }
 
@@ -279,17 +279,17 @@ get_data <- function(num = NULL, num_type = "num_temp", data_type = NULL, config
 
 #' match_patient
 #' @export
-match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais = NULL, annee_range = NULL, count_unique = NULL, count_range = NULL, n_match = NULL, config = NULL) {
+match_patient <- function(num = NULL, num_type = "cohorte", sexe = NULL, annee_nais = NULL, annee_range = NULL, count_unique = NULL, count_range = NULL, n_match = NULL, config = NULL) {
 
   subquery <- patients_subquery(num_type)
 
-  
-  sql <- stringr::str_interp(  "SELECT r.PATIENT_NUM FROM 
+
+  sql <- stringr::str_interp(  "SELECT r.PATIENT_NUM FROM
   (SELECT C.PATIENT_NUM FROM NEU_CONCEPTS_COUNTS C
     LEFT JOIN i2b2demodata.PATIENT_DIMENSION p
     ON c.PATIENT_NUM = p.PATIENT_NUM
     WHERE p.PATIENT_NUM not in  ( ${subquery} ${num} ) AND
-    p.SEX_CD = '${sexe}' 
+    p.SEX_CD = '${sexe}'
     and TO_NUMBER(TO_CHAR(p.BIRTH_DATE, 'YYYY'), '9999') between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
     and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
     ORDER BY c.PATIENT_NUM) r")
@@ -317,11 +317,11 @@ match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais =
 #               count_range = 2 ,
 #               n_match = 5,
 #               config = config)
-# 
+#
 
 #' match_patients_from_num
 #' @export
-match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = NULL, count_range = NULL, n_match = NULL,match_save= FALSE, match_save_title = NULL, config = NULL) {
+match_patients_from_num <- function(num = NULL, num_type = "cohorte", annee_range = NULL, count_range = NULL, n_match = NULL,match_save= FALSE, match_save_title = NULL, config = NULL) {
 
 
 
@@ -368,28 +368,28 @@ match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = N
 #' insert_patients_into_dwh_resultat
 #' @export
 insert_patients_into_dwh_resultat <- function(patients,  config) {
-  
+
   sql = "SELECT nextval('i2b2demodata.qt_query_master_query_master_id_seq'::regclass)"
   res <- oracleQuery(sql, config)
   master_id <- res$NEXTVAL[1]
-  
+
   sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_master (query_master_id,name,user_id, group_id, create_date)
   VALUES (${master_id},'Control TEST','demo','Demo',current_date)")
   oracleQuery(sql, config, update = T, data = F)
-  
-  
+
+
   sql = "SELECT nextval('i2b2demodata.qt_query_instance_query_instance_id_seq'::regclass)"
   res <- oracleQuery(sql, config)
   instance_id <- res$NEXTVAL[1]
-  
+
 sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_instance (query_instance_id,query_master_id,user_id, group_id, start_date)
   VALUES (${instance_id},${master_id},'${config$username}','Demo',current_date)")
   oracleQuery(sql, config, update = T, data = F)
-  
+
   sql = "SELECT nextval('i2b2demodata.qt_query_result_instance_result_instance_id_seq'::regclass)"
   res <- oracleQuery(sql, config)
   result_id <- res$NEXTVAL[1]
-  
+
   sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_result_instance (result_instance_id,query_instance_id,result_type_id,start_date,status_type_id)
   VALUES (${result_id},${instance_id},1,current_date,3)")
   oracleQuery(sql, config, update = T, data = F)
@@ -404,7 +404,7 @@ sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_instance (query_ins
   #values <- paste0("INTO qt_patient_set_collection (result_instance_id, PATIENT_NUM) VALUES ", values)
   # values <- paste(values, collapse = "\n")
 
-  sql <- stringr::str_interp("INSERT INTO i2b2demodata.qt_patient_set_collection (result_instance_id, PATIENT_NUM) VALUES  
+  sql <- stringr::str_interp("INSERT INTO i2b2demodata.qt_patient_set_collection (result_instance_id, PATIENT_NUM) VALUES
                              ${values}")
 
    print(sql)
