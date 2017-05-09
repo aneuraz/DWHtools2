@@ -438,3 +438,36 @@ add_patients_to_cohort <- function(num_cohorte, patient_nums, username, config) 
 
 #add_patients_to_cohort(num_cohorte, patient_nums, config$username, config)
 
+#' get_patients_counts_from_dwh
+#' @export
+get_patients_counts_from_dwh <- function(config = config) {
+
+  date_maj_counts <- oracleQuery('SELECT max(D_MAJ) as d_maj from NEU_CONCEPTS_COUNTS', config)
+  date_maj_enrsem <- oracleQuery('SELECT max(D_MAJ) as d_maj from DWH_ENRSEM', config)
+
+  if (as.Date(date_maj_counts$D_MAJ) < as.Date(date_maj_enrsem$D_MAJ)) {
+    # drop old concepts counts
+    oracleQuery('DROP TABLE NEU_CONCEPTS_COUNTS', config, data = F)
+
+    # create new concept counts
+    oracleQuery('CREATE TABLE NEU_CONCEPTS_COUNTS as
+                (SELECT e.*, d.min_date, max_date, duree_suivi, count_doc, (SELECT max(D_MAJ) from DWH_ENRSEM) AS d_maj from
+                (SELECT patient_num, count(DISTINCT certitude ||code) as count_unique, count (certitude ||code) as count_total
+                FROM dwh_enrsem
+                WHERE contexte=\'texte_patient\'
+                GROUP BY patient_num) e
+                LEFT JOIN DWH_PATIENT p
+                on p.PATIENT_NUM = e.PATIENT_NUM
+                LEFT JOIN (SELECT patient_num, min(date_document) AS min_date, max(date_document) AS max_date, max(date_document) - min(date_document) AS duree_suivi, count(*) AS count_doc
+                FROM DWH_DOCUMENT
+                GROUP BY patient_num) d
+                ON p.PATIENT_NUM = d.patient_num)', config, data = F)
+  }
+
+  # retrieve counts
+  # oracleQuery('SELECT c.PATIENT_NUM, c.COUNT_UNIQUE, c.COUNT_D_TOTAL, p.DATENAIS, p.SEXE, p.CP, p.PAYS, p.PAYS_NAISSANCE, p.CODE_DECES, TO_NUMBER(TO_CHAR(p.DATENAIS, \'YYYY\')) as ANNEE_NAIS
+  #             from NEU_CONCEPTS_COUNTS c
+  #             LEFT JOIN dwh_patient p
+  #             on p.PATIENT_NUM = c.PATIENT_NUM', config)
+
+  }
