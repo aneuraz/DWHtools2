@@ -15,6 +15,8 @@
 #'
 #'username  VALUE
 #'
+#'backend VALUE
+#'
 #'@param file_path Path to the config file
 #'@return config environment for DB connection
 #'@export
