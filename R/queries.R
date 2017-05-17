@@ -267,7 +267,7 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
 
 #' get_data
 #' @export
-get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NULL) {
+get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NULL, ICD_prefix = 'CIM10') {
 
   if (is.null(num) | is.null(num_type)) {
     stop('valid num and num_type are required')
@@ -321,8 +321,9 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
                                  C.NAME_CHAR as LIBELLE_PARENT,
                                  O.CONCEPT_CD as CODE_PARENT
                                  FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
-                                 WHERE C.CONCEPT_CD LIKE 'ICD%' AND
+                                 WHERE C.CONCEPT_CD LIKE '${ICD_prefix}%' AND
                                  C.CONCEPT_CD = O.CONCEPT_CD AND
+                                 O.SCHEME_KEY = '${ICD_prefix}:' AND
                                  O.PATIENT_NUM in (${subquery} ${num} )
                                  ")
     }
