@@ -17,17 +17,13 @@ Load configuration parameters for DB connection
 This file is a tab separated txt file of the form:
 }
 \details{
-driver_type     VALUE
+driverType     VALUE
 
-driver_path     VALUE
+driverPath     VALUE
 
-db_user VALUE
+connectPath VALUE
 
-db_pass VALUE
+dbuser VALUE
 
-db_host VALUE
-
-db_port VALUE
-
-db_name VALUE
+dbpass VALUE
 }

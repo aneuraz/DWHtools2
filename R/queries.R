@@ -40,20 +40,44 @@ get_cohorts_list <- function(username = NULL , only_num = FALSE, config = NULL) 
     stop("a valid config object is required")
   }
 
-  if (!only_num) {
-    columns = "r.num_cohorte, c.titre_cohorte, count(distinct r.patient_num) as n_patients"
-  } else {
-    columns = "r.num_cohorte"
+  if(config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
+
+    if (!only_num) {
+      columns = "c.result_instance_id as num_cohorte, m.name as titre_cohorte, r.real_set_size as n_patients"
+    } else {
+      columns = "c.result_instance_id as num_cohorte"
+    }
+
+
+    sql = stringr::str_interp("select distinct ${columns}
+                              FROM
+                              i2b2demodata.qt_query_master m,
+                              i2b2demodata.qt_query_instance i,
+                              i2b2demodata.qt_query_result_instance r,
+                              i2b2demodata.qt_patient_set_collection c
+
+                              WHERE
+                              m.user_id = '${username}' AND
+                              m.query_master_id = i.query_master_id AND
+                              i.query_instance_id = r.query_instance_id AND
+                              r.result_instance_id = c.result_instance_id")
+
+  } else if (config$backend == 'drwh_oracle') {
+    if (!only_num) {
+      columns = "r.num_cohorte, c.titre_cohorte, count(distinct r.patient_num) as n_patients"
+    } else {
+      columns = "r.num_cohorte"
+    }
+
+    sql = stringr::str_interp("select ${columns}
+                              from dwh_cohorte_resultat r
+                              left join dwh_cohorte c
+                              on c.num_cohorte = r.num_cohorte
+                              where c.num_user_creation = ${username}
+                              and r.statut = 1
+                              group by r.num_cohorte, c.titre_cohorte")
+
   }
-
-  sql = stringr::str_interp("select ${columns}
-                    from dwh_cohorte_resultat r
-                    left join dwh_cohorte c
-                    on c.num_cohorte = r.num_cohorte
-                    where c.num_user_creation = ${username}
-                    and r.statut = 1
-                    group by r.num_cohorte, c.titre_cohorte")
-
 
  res <- oracleQuery(sql, config)
 
@@ -97,7 +121,7 @@ get_num_temp_list <- function(username = NULL, only_num = FALSE, config = NULL) 
 
 #' patients_subquery
 #' @export
-patients_subquery <- function(num_type) {
+patients_subquery <- function(num_type, backend) {
 
   if(!(num_type %in% c('num_temp', 'cohorte'))) {
     stop('num_type must be either "num_type" or "cohorte"')
@@ -105,8 +129,14 @@ patients_subquery <- function(num_type) {
 
   if (num_type == 'num_temp') {
 
-    return("SELECT distinct PATIENT_NUM from DWH_RESULTAT
+    if (backend == 'drwh_oracle') {
+      return("SELECT distinct PATIENT_NUM from DWH_RESULTAT
     where num_temp = ")
+    } else if (backend == 'i2b2_oracle' | backend == 'i2b2_postgres'){
+      return("SELECT distinct PATIENT_NUM from i2b2demodata.qt_patient_set_collection
+    where result_instance_id = ")
+
+    }
 
   } else if (num_type == 'cohorte') {
 
@@ -138,28 +168,54 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
   count_query <- ""
   test_count <- ""
 
-  if (!only_num) {
-    columns <- "p.PATIENT_NUM, p.DATENAIS, p.SEXE, p.CP, p.PAYS, p.PAYS_NAISSANCE, p.CODE_DECES, TO_CHAR(p.DATENAIS, 'YYYY') as ANNEE_NAIS"
-  } else {
-    columns <- "p.PATIENT_NUM"
+  if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
+    if (!only_num) {
+      columns <- "p.PATIENT_NUM, birth_date as DATENAIS, SEX_CD as SEXE, zip_cd as CP, null as PAYS, null as PAYS_NAISSANCE, vital_status_cd as CODE_DECES, TO_CHAR(birth_date, 'YYYY') as ANNEE_NAIS"
+    } else {
+      columns <- "p.PATIENT_NUM"
+    }
+
+    subquery <- patients_subquery(num_type, config$backend)
+
+    if (count) {
+      columns <- paste(columns, ", c.COUNT_UNIQUE")
+      count_query <- "LEFT JOIN NEU_CONCEPTS_COUNTS c
+      on p.PATIENT_NUM = c.PATIENT_NUM
+      ";
+      test_count <- "and c.COUNT_UNIQUE is not null";
+    }
+
+    sql = stringr::str_interp("SELECT ${columns}
+                              FROM i2b2demodata.PATIENT_DIMENSION p
+                              ${count_query}
+                              where p.PATIENT_NUM in ( ${subquery} ${num})
+                              ${test_count}")
+
+  } else if (config$backend == 'drwh_oracle') {
+
+    if (!only_num) {
+      columns <- "p.PATIENT_NUM, p.DATENAIS, p.SEXE, p.CP, p.PAYS, p.PAYS_NAISSANCE, p.CODE_DECES, TO_CHAR(p.DATENAIS, 'YYYY') as ANNEE_NAIS"
+    } else {
+      columns <- "p.PATIENT_NUM"
+    }
+
+    subquery <- patients_subquery(num_type, config$backend)
+
+    if (count) {
+      columns <- paste(columns, ", c.COUNT_UNIQUE")
+      count_query <- "LEFT JOIN NEU_CONCEPTS_COUNTS c
+      on p.PATIENT_NUM = c.PATIENT_NUM
+      ";
+      test_count <- "and c.COUNT_UNIQUE is not null";
+    }
+
+    sql = stringr::str_interp("SELECT ${columns}
+                              FROM DWH_PATIENT p
+                              ${count_query}
+                              where p.PATIENT_NUM in ( ${subquery} ${num})
+                              ${test_count}")
+
   }
-
-  subquery <- patients_subquery(num_type)
-
-  if (count) {
-    columns <- paste(columns, ", c.COUNT_UNIQUE")
-    count_query <- "LEFT JOIN NEU_CONCEPTS_COUNTS c
-    on p.PATIENT_NUM = c.PATIENT_NUM
-    ";
-    test_count <- "and c.COUNT_UNIQUE is not null";
-  }
-
-  sql = stringr::str_interp("SELECT ${columns}
-  FROM DWH_PATIENT p
-  ${count_query}
-  where p.PATIENT_NUM in ( ${subquery} ${num})
-  ${test_count}")
-
 
   res <- oracleQuery(sql, config)
 
@@ -183,7 +239,7 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
   }
 
 
-  subquery <- patients_subquery(num_type)
+  subquery <- patients_subquery(num_type, config$backend)
 
   sql <- stringr::str_interp("SELECT PATIENT_NUM, IEP, DATE_DOCUMENT, ORIGINE_DOC, AGE_PATIENT, CERTITUDE, CONTEXTE, e.CODE_THESAURUS,
   e.CODE, e.TFIDF_CODE_DOCUMENT, e.NB_CODE,
@@ -219,36 +275,82 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
     stop('data_type must be either "bio_num" or "cim10"')
   }
 
-  subquery <- patients_subquery(num_type)
+  subquery <- patients_subquery(num_type, config$backend)
 
-  if (data_type == 'bio_num') {
+  if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
 
-    sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_NUMERIC, d.DATE_DOCUMENT,
-            d.BORNE_INF, d.BORNE_SUP, d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT,
-	        (CASE WHEN d.VAL_NUMERIC < d.BORNE_INF THEN 1 ELSE 0 END) AS inf,
-            (CASE WHEN d.VAL_NUMERIC > d.BORNE_SUP THEN 1 ELSE 0 END) AS sup
-            FROM DWH_DATA d
-            LEFT JOIN DWH_THESAURUS_DATA t
-            ON d.id_thesaurus_data = t.ID_THESAURUS_DATA
-            LEFT JOIN DWH_THESAURUS_DATA tt
-            ON t.id_thesaurus_parent = tt.ID_THESAURUS_DATA
-            WHERE d.THESAURUS = 'STARE'
-            AND d.VAL_NUMERIC IS NOT NULL
-            AND d.BORNE_INF IS NOT NULL
-            AND d.BORNE_SUP IS NOT NULL
-            AND d.patient_num IN ( ${subquery} ${num} )")
+    if (data_type == 'bio_num') {
 
-  } else if (data_type == 'cim10' ) {
+      sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
+                                 O.ENCOUNTER_NUM as IEP,
+                                 O.CONCEPT_CD as CODE,
+                                 C.NAME_CHAR as CODE_LIBELLE,
+                                 O.NVAL_NUM as VAL_NUMERIC,
+                                 O.START_DATE as DATE_DOCUMENT,
+                                 null as BORNE_INF,
+                                 null as BORNE_SUP,
+                                 null as ID_THESAURUS_DATA,
+                                 C.NAME_CHAR as LIBELLE_PARENT,
+                                 O.CONCEPT_CD as CODE_PARENT,
+                                 VALUEFLAG_CD,
+                                 (CASE WHEN VALUEFLAG_CD = 'L' THEN 1 ELSE 0 END) as inf,
+                                 (CASE WHEN VALUEFLAG_CD = 'H' THEN 1 ELSE 0 END) as sup
+                                 FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
+                                 WHERE C.CONCEPT_CD LIKE 'LOINC%' AND
+                                 C.CONCEPT_CD = O.CONCEPT_CD AND
+                                 O.NVAL_NUM is not null AND
+                                 O.VALUEFLAG_CD IN ('L', 'H', 'A') AND
+                                 O.PATIENT_NUM in (${subquery} ${num} )
+                                 ")
 
-    sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_TEXTE, d.DATE_DOCUMENT,
-                      d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT, tt.code as CODE_PARENT
-                      FROM DWH_DATA d
-                      LEFT JOIN DWH_THESAURUS_DATA t
-                      ON d.id_thesaurus_data = t.ID_THESAURUS_DATA
-                      LEFT JOIN DWH_THESAURUS_DATA tt
-                      ON t.id_thesaurus_parent = tt.ID_THESAURUS_DATA
-                      WHERE d.THESAURUS = 'cim10'
-                      AND d.patient_num in ( ${subquery} ${num} )")
+    } else if (data_type == 'cim10' ) {
+
+      sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
+                                 O.ENCOUNTER_NUM as IEP,
+                                 O.CONCEPT_CD as CODE,
+                                 C.NAME_CHAR as CODE_LIBELLE,
+                                 O.NVAL_NUM as VAL_NUMERIC,
+                                 O.START_DATE as DATE_DOCUMENT,
+                                 null as ID_THESAURUS_DATA,
+                                 C.NAME_CHAR as LIBELLE_PARENT,
+                                 O.CONCEPT_CD as CODE_PARENT
+                                 FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
+                                 WHERE C.CONCEPT_CD LIKE 'ICD%' AND
+                                 C.CONCEPT_CD = O.CONCEPT_CD AND
+                                 O.PATIENT_NUM in (${subquery} ${num} )
+                                 ")
+    }
+
+  } else if (config$backend == 'drwh_oracle') {
+    if (data_type == 'bio_num') {
+
+      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_NUMERIC, d.DATE_DOCUMENT,
+                                 d.BORNE_INF, d.BORNE_SUP, d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT,
+                                 (CASE WHEN d.VAL_NUMERIC < d.BORNE_INF THEN 1 ELSE 0 END) AS inf,
+                                 (CASE WHEN d.VAL_NUMERIC > d.BORNE_SUP THEN 1 ELSE 0 END) AS sup
+                                 FROM DWH_DATA d
+                                 LEFT JOIN DWH_THESAURUS_DATA t
+                                 ON d.id_thesaurus_data = t.ID_THESAURUS_DATA
+                                 LEFT JOIN DWH_THESAURUS_DATA tt
+                                 ON t.id_thesaurus_parent = tt.ID_THESAURUS_DATA
+                                 WHERE d.THESAURUS = 'STARE'
+                                 AND d.VAL_NUMERIC IS NOT NULL
+                                 AND d.BORNE_INF IS NOT NULL
+                                 AND d.BORNE_SUP IS NOT NULL
+                                 AND d.patient_num IN ( ${subquery} ${num} )")
+
+    } else if (data_type == 'cim10' ) {
+
+      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_TEXTE, d.DATE_DOCUMENT,
+                                 d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT, tt.code as CODE_PARENT
+                                 FROM DWH_DATA d
+                                 LEFT JOIN DWH_THESAURUS_DATA t
+                                 ON d.id_thesaurus_data = t.ID_THESAURUS_DATA
+                                 LEFT JOIN DWH_THESAURUS_DATA tt
+                                 ON t.id_thesaurus_parent = tt.ID_THESAURUS_DATA
+                                 WHERE d.THESAURUS = 'cim10'
+                                 AND d.patient_num in ( ${subquery} ${num} )")
+    }
   }
 
   res <- oracleQuery(sql, config)
@@ -263,19 +365,35 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
 #' @export
 match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais = NULL, annee_range = NULL, count_unique = NULL, count_range = NULL, n_match = NULL, config = NULL) {
 
-  subquery <- patients_subquery(num_type)
+  subquery <- patients_subquery(num_type, config$backend)
 
-  sql <- stringr::str_interp("SELECT PATIENT_NUM from (
+  if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
+
+    sql <- stringr::str_interp(  "SELECT r.PATIENT_NUM FROM
+  (SELECT C.PATIENT_NUM FROM NEU_CONCEPTS_COUNTS C
+                                 LEFT JOIN i2b2demodata.PATIENT_DIMENSION p
+                                 ON c.PATIENT_NUM = p.PATIENT_NUM
+                                 WHERE p.PATIENT_NUM not in  ( ${subquery} ${num} ) AND
+                                 p.SEX_CD = '${sexe}'
+                                 and TO_NUMBER(TO_CHAR(p.BIRTH_DATE, 'YYYY'), '9999') between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
+                                 and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
+                                 ORDER BY c.PATIENT_NUM) r")
+
+  } else if (config$backend == 'drwh_oracle') {
+
+    sql <- stringr::str_interp("SELECT PATIENT_NUM from (
   SELECT c.PATIENT_NUM
-  from NEU_CONCEPTS_COUNTS c
-  LEFT JOIN dwh_patient p
-  on p.PATIENT_NUM = c.PATIENT_NUM
-  WHERE p.PATIENT_NUM NOT IN ( ${subquery} ${num} )
-  and p.SEXE = '${sexe}'
-  and TO_NUMBER(TO_CHAR(p.DATENAIS, 'YYYY')) between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
-  and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
-  order by PATIENT_NUM) r
-  ")
+                               from NEU_CONCEPTS_COUNTS c
+                               LEFT JOIN dwh_patient p
+                               on p.PATIENT_NUM = c.PATIENT_NUM
+                               WHERE p.PATIENT_NUM NOT IN ( ${subquery} ${num} )
+                               and p.SEXE = '${sexe}'
+                               and TO_NUMBER(TO_CHAR(p.DATENAIS, 'YYYY')) between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
+                               and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
+                               order by PATIENT_NUM) r
+                               ")
+
+  }
 
   res <- oracleQuery(sql, config)
 
@@ -327,23 +445,30 @@ match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = N
   #
   # data <- as.vector(data)
 
-  num_temp <- insert_patients_into_dwh_resultat(result, config)
+  if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
 
-  if(match_save) {
-    num_save <- create_cohorte(match_save_title,
-                   stringr::str_interp("cohort created by multimodal PheWAS during the analysis of the cohort ${num}"),
-                   config$username, config)
+    num_temp <- insert_patients_into_query_result_instance(result, config)
 
-    add_privilege_to_cohort(num_save, config$username, 'voir_stats', config)
+  } else if (config$backend == 'drwh_oracle') {
 
-    add_patients_to_cohort(num_save, result, config$username, config)
+    num_temp <- insert_patients_into_dwh_resultat(result, config)
+
+    if(match_save) {
+      num_save <- create_cohorte(match_save_title,
+                                 stringr::str_interp("cohort created by multimodal PheWAS during the analysis of the cohort ${num}"),
+                                 config$username, config)
+
+      add_privilege_to_cohort(num_save, config$username, 'voir_stats', config)
+
+      add_patients_to_cohort(num_save, result, config$username, config)
+
+    }
 
   }
 
   return (num_temp)
 
 }
-
 
 #controls <- match_patients_from_num(num = '13624005402', num_type= 'cohorte',annee_range = 5,count_range = 0.3,n_match = 5, config = config)
 
@@ -373,6 +498,61 @@ insert_patients_into_dwh_resultat <- function(patients,  config) {
    print(sql)
    oracleQuery(sql, config, update = T, data = F)
    return(num_temp)
+
+}
+
+insert_patients_into_query_result_instance <- function(patients,  config) {
+
+  sql = "SELECT nextval('i2b2demodata.qt_query_master_query_master_id_seq'::regclass)"
+  res <- oracleQuery(sql, config)
+  master_id <- res$NEXTVAL[1]
+
+  sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_master (query_master_id,name,user_id, group_id, create_date)
+  VALUES (${master_id},'Control TEST','demo','Demo',current_date)")
+  oracleQuery(sql, config, update = T, data = F)
+
+
+  sql = "SELECT nextval('i2b2demodata.qt_query_instance_query_instance_id_seq'::regclass)"
+  res <- oracleQuery(sql, config)
+  instance_id <- res$NEXTVAL[1]
+
+  sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_instance (query_instance_id,query_master_id,user_id, group_id, start_date)
+  VALUES (${instance_id},${master_id},'${config$username}','Demo',current_date)")
+  oracleQuery(sql, config, update = T, data = F)
+
+  sql = "SELECT nextval('i2b2demodata.qt_query_result_instance_result_instance_id_seq'::regclass)"
+  res <- oracleQuery(sql, config)
+  result_id <- res$NEXTVAL[1]
+
+  sql = stringr::str_interp("INSERT INTO i2b2demodata.qt_query_result_instance (result_instance_id,query_instance_id,result_type_id,start_date,status_type_id)
+  VALUES (${result_id},${instance_id},1,current_date,3)")
+  oracleQuery(sql, config, update = T, data = F)
+
+  dt <- data.frame(RESULT_INSTANCE_ID = result_id,
+                   PATIENT_NUM = patients)
+
+
+  values <- apply(dt, 1 , paste, collapse = "','")
+  values <- paste0("('",values, "')")
+
+  if (config$backend == 'i2b2_oracle') {
+    values <- paste0("INTO qt_patient_set_collection (result_instance_id, PATIENT_NUM) VALUES ", values)
+    values <- paste(values, collapse = "\n")
+
+    sql <- stringr::str_interp("INSERT ALL
+                               ${values}
+                               SELECT 1 FROM DUAL")
+
+  } else if (config$backend == 'i2b2_postgres') {
+
+    values <- paste0(values, collapse = ',')
+    sql <- stringr::str_interp("INSERT INTO i2b2demodata.qt_patient_set_collection (result_instance_id, PATIENT_NUM) VALUES
+                               ${values}")
+  }
+
+  print(sql)
+  oracleQuery(sql, config, update = T, data = F)
+  return(num_temp)
 
 }
 
