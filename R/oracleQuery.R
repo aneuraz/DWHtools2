@@ -34,9 +34,11 @@ oracleQuery <- function(query, config = config, update = F, data = T) {
 
   # disconnection
   RJDBC::dbDisconnect(jdbcConnection)
-
+  print(result)
   if (data) {
-    names(result) <- toupper(names(result))
+    if (!is.null(result)) {
+      names(result) <- toupper(names(result))
+    }
     return(result)
   }
 

@@ -132,17 +132,20 @@ patients_subquery <- function(num_type, backend) {
     if (backend == 'drwh_oracle') {
       return("SELECT distinct PATIENT_NUM from DWH_RESULTAT
     where num_temp = ")
-    } else if (backend == 'i2b2_oracle' | backend == 'i2b2_postgres'){
-      return("SELECT distinct PATIENT_NUM from i2b2demodata.qt_patient_set_collection
-    where result_instance_id = ")
-
-    }
+    } 
 
   } else if (num_type == 'cohorte') {
 
-    return ("SELECT distinct patient_num
+    if (backend == 'drwh_oracle') {
+      return("SELECT distinct patient_num
     from dwh_cohorte_resultat
     where statut = 1 and num_cohorte = ")
+    } else if (backend == 'i2b2_oracle' | backend == 'i2b2_postgres'){
+      return("SELECT distinct PATIENT_NUM from i2b2demodata.qt_patient_set_collection
+    where result_instance_id = ")
+      
+    }
+    
   } else {
 
     return(NULL)
@@ -237,7 +240,10 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
   if (is.null(config)) {
     stop("a valid config object is required")
   }
-
+  
+  if (config$backend == "i2b2_oracle" | config$backend == "i2b2_postgres") {
+    return(NULL)
+  }
 
   subquery <- patients_subquery(num_type, config$backend)
 
@@ -397,12 +403,14 @@ match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais =
 
   res <- oracleQuery(sql, config)
 
-
-  if (nrow(res)> n_match) {
-    res <- res[sample(1:nrow(res), n_match),]
-  } else {
-    res <- res[sample(1:nrow(res), nrow(res)),]
+  if(!is.null(res)) {
+    if (nrow(res)> n_match) {
+      res <- res[sample(1:nrow(res), n_match),]
+    } else {
+      res <- res[sample(1:nrow(res), nrow(res)),]
+    }
   }
+
 
   return(res)
 
@@ -429,13 +437,19 @@ match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = N
 
   cl<-parallel::makeCluster(parallel::detectCores())
 
-  parallel::clusterEvalQ(cl, {library(dplyr); library(stringr); library(MASS); library(tidyr);library(broom);library(DWHtools);library(boot)})
+  parallel::clusterEvalQ(cl, {library(dplyr); library(stringr); library(MASS); library(tidyr);library(broom);library(DWHtools2);library(boot)})
   parallel::clusterExport(cl, "match_patient")
 
   res_temp <- parallel::parLapply(cl, 1:nrow(patients) , fun= function(x, patients, num, num_type, annee_range, count_range, n_match, config) {
     match_patient(num, num_type, patients[x,'SEXE'], patients[x,'ANNEE_NAIS'],annee_range, patients[x,'COUNT_UNIQUE'],  count_range, n_match, config)
   }, patients= patients, num = num, num_type = num_type, annee_range = annee_range, count_range = count_range, n_match = n_match, config = config)
   parallel::stopCluster(cl)
+  
+ #  res_temp = list()
+ #  for (i in (1:nrow(patients))) {
+ #    print(i)
+ #    res_temp[i] = list(match_patient(num, num_type, patients[i,'SEXE'], patients[i,'ANNEE_NAIS'],annee_range, patients[i,'COUNT_UNIQUE'],  count_range, n_match, config)
+ # ) }
 
   result <- as.vector(unlist(res_temp))
 
@@ -550,9 +564,8 @@ insert_patients_into_query_result_instance <- function(patients,  config) {
                                ${values}")
   }
 
-  print(sql)
   oracleQuery(sql, config, update = T, data = F)
-  return(num_temp)
+  return(result_id)
 
 }
 
