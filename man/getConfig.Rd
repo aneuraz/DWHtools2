@@ -26,4 +26,8 @@ connectPath VALUE
 dbuser VALUE
 
 dbpass VALUE
+
+username  VALUE
+
+backend VALUE
 }
