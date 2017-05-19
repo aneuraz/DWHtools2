@@ -132,7 +132,7 @@ patients_subquery <- function(num_type, backend) {
     if (backend == 'drwh_oracle') {
       return("SELECT distinct PATIENT_NUM from DWH_RESULTAT
     where num_temp = ")
-    } 
+    }
 
   } else if (num_type == 'cohorte') {
 
@@ -143,9 +143,9 @@ patients_subquery <- function(num_type, backend) {
     } else if (backend == 'i2b2_oracle' | backend == 'i2b2_postgres'){
       return("SELECT distinct PATIENT_NUM from i2b2demodata.qt_patient_set_collection
     where result_instance_id = ")
-      
+
     }
-    
+
   } else {
 
     return(NULL)
@@ -240,22 +240,36 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
   if (is.null(config)) {
     stop("a valid config object is required")
   }
-  
+
   if (config$backend == "i2b2_oracle" | config$backend == "i2b2_postgres") {
     return(NULL)
   }
 
   subquery <- patients_subquery(num_type, config$backend)
 
-  sql <- stringr::str_interp("SELECT PATIENT_NUM, IEP, DATE_DOCUMENT, ORIGINE_DOC, AGE_PATIENT, CERTITUDE, CONTEXTE, e.CODE_THESAURUS,
-  e.CODE, e.TFIDF_CODE_DOCUMENT, e.NB_CODE,
-  t.NIVEAU, t.CODE_LIBELLE , t.NB_PATIENT, t.GENOTYPE, t.PHENOTYPE, t.CHEMIN_LIBELLE
-  FROM DWH_ENRSEM e
-  LEFT JOIN DWH_THESAURUS_ENRSEM t
-  on e.CODE = t.CODE
-  where PREF = 'Y'
-  and CONTEXTE = 'texte_patient'
-  and patient_num  in ( ${subquery} ${num})")
+  sql <- stringr::str_interp("SELECT e.PATIENT_NUM, e.IEP, e.DATE_DOCUMENT, e.ORIGINE_DOC, e.AGE_PATIENT, e.CERTITUDE,e.CONTEXTE, e.CODE_THESAURUS,
+  e.CODE, e.TFIDF_CODE_DOCUMENT, e.NB_CODE, thes.NIVEAU, thes.CODE_LIBELLE, thes.NB_PATIENT, thes.GENOTYPE, thes.PHENOTYPE, thes.CHEMIN_LIBELLE, thes.CODE_LIBELLE_EN,
+                             thes.CODE_PERE, thes.CODE_LIBELLE_PERE, thes.CODE_LIBELLE_PERE_EN
+                             FROM DWH_ENRSEM e
+                             LEFT JOIN (SELECT  t.NIVEAU, t.CODE_LIBELLE , t.NB_PATIENT, t.GENOTYPE, t.PHENOTYPE, t.CHEMIN_LIBELLE, t.CODE, t.CODE_LIBELLE_EN,
+                             p.code_pere,
+                             tt.code_libelle AS code_libelle_pere, tt.code_libelle_en AS code_libelle_pere_en
+                             FROM dwh_thesaurus_enrsem t
+                             LEFT JOIN (SELECT min(g.CODE_PERE) CODE_PERE, g.CODE_FILS
+                             FROM DWH_THESAURUS_ENRSEM_GRAPH g
+                             WHERE g.DISTANCE = 1
+                             GROUP BY g.CODE_FILS) P
+                             ON t.code = p.code_fils
+                             LEFT JOIN (SELECT min(ttt.code_libelle) code_libelle, min(ttt.code_libelle_en) code_libelle_en, ttt.code
+                             FROM dwh_thesaurus_enrsem ttt GROUP BY ttt.code) tt
+                             ON tt.code = p.code_pere
+                             WHERE t.PREF = 'Y') thes
+                             ON e.CODE = thes.CODE
+                             where e.CONTEXTE = 'texte_patient'
+                             and e.patient_num  in ( ${subquery} ${num})")
+
+
+
 
   res <- oracleQuery(sql, config)
 
@@ -445,7 +459,7 @@ match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = N
     match_patient(num, num_type, patients[x,'SEXE'], patients[x,'ANNEE_NAIS'],annee_range, patients[x,'COUNT_UNIQUE'],  count_range, n_match, config)
   }, patients= patients, num = num, num_type = num_type, annee_range = annee_range, count_range = count_range, n_match = n_match, config = config)
   parallel::stopCluster(cl)
-  
+
  #  res_temp = list()
  #  for (i in (1:nrow(patients))) {
  #    print(i)
