@@ -2,10 +2,21 @@
 % Please edit documentation in R/queries.R
 \name{get_concepts}
 \alias{get_concepts}
-\title{get_concepts}
+\title{get_concepts
+For Dr.Warehouse}
 \usage{
 get_concepts(num = NULL, num_type = NULL, config = NULL)
 }
+\arguments{
+\item{num}{the identifier of the cohort/num_temp}
+
+\item{num_type}{type of num: one of c('num_temp', 'cohorte')}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+a data.frame
+}
 \description{
-get_concepts
+Get the concepts (e.g. UMLS concepts extracted from free text reports) for the patients in a cohort/num_temp.
 }

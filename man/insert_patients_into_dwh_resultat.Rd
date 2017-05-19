@@ -6,6 +6,15 @@
 \usage{
 insert_patients_into_dwh_resultat(patients, config)
 }
+\arguments{
+\item{patients}{a vector of patient_nums}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+num_temp
+}
 \description{
-insert_patients_into_dwh_resultat
+For Dr.Warehouse
+inser patients in DWH_RESULTAT
 }

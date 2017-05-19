@@ -6,6 +6,18 @@
 \usage{
 get_cohorts_list(username = NULL, only_num = FALSE, config = NULL)
 }
+\arguments{
+\item{username}{a username (string)}
+
+\item{only_num}{set to `TRUE` if you want only a vector of cohort numbers. Set to `FALSE`
+if you also need the name of the cohort and the number of patients (default = `FALSE`)}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+a data.frame with the list of cohorts
+}
 \description{
-get_cohorts_list
+For Dr.Warehouse and i2b2
+Get the list of cohorts or patient sets for a given username.
 }

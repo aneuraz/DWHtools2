@@ -6,6 +6,15 @@
 \usage{
 username_from_login(login = NULL, config = NULL)
 }
+\arguments{
+\item{login}{a string login}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+a character vector username.
+}
 \description{
-username_from_login
+For Dr.Warehouse
+Get the internal username given a login
 }

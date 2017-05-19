@@ -1,7 +1,11 @@
-#library(stringr)
-#config <- getConfig("../../dwh_config")
-
 #' username_from_login
+#'
+#' For Dr.Warehouse
+#' Get the internal username given a login
+#'
+#' @param login a string login
+#' @param config a config environment created by the function getConfig.
+#' @return a character vector username.
 #' @export
 username_from_login <- function(login = NULL, config = NULL) {
 
@@ -23,10 +27,16 @@ username_from_login <- function(login = NULL, config = NULL) {
   res$NUM_USER[1]
 }
 
-#username <- username_from_login("3252446", config)
-
-
 #' get_cohorts_list
+#'
+#' For Dr.Warehouse and i2b2
+#' Get the list of cohorts or patient sets for a given username.
+#'
+#' @param username a username (string)
+#' @param only_num set to `TRUE` if you want only a vector of cohort numbers. Set to `FALSE`
+#'  if you also need the name of the cohort and the number of patients (default = `FALSE`)
+#' @param config a config environment created by the function getConfig.
+#' @return a data.frame with the list of cohorts
 #' @export
 get_cohorts_list <- function(username = NULL , only_num = FALSE, config = NULL) {
 
@@ -85,9 +95,17 @@ get_cohorts_list <- function(username = NULL , only_num = FALSE, config = NULL) 
   return(res)
 }
 
-#cohorts <- get_cohorts_list(username, only_num = FALSE, config)
-
 #' get_num_temp_list
+#'
+#' For Dr.Warehouse
+#' Get the list of recent queries results for a given username.
+#'
+#' @param username a username (string)
+#' @param only_num set to `TRUE` if you want only a vector of num_temp numbers. Set to `FALSE`
+#'  if you also need the number of patients (default = `FALSE`)
+#' @param config a config environment created by the function getConfig.
+#' @return a data.frame with the list of num_temps
+#' @export
 #' @export
 get_num_temp_list <- function(username = NULL, only_num = FALSE, config = NULL) {
 
@@ -117,9 +135,14 @@ get_num_temp_list <- function(username = NULL, only_num = FALSE, config = NULL) 
   return(res)
 }
 
-#get_num_temp_list("13622243453")
-
 #' patients_subquery
+#'
+#' For i2b2 and Dr.Warehouse
+#' Get the patients SQL subquery corresponding to the type cohort/num_temp and the backend Dr.Warehouse/i2b2
+#'
+#' @param num_type one of c('num_temp', 'cohorte')
+#' @param backend one of c('i2b2_oracle','i2b2_postgres', 'drwh_oracle' )
+#' @return SQL subquery
 #' @export
 patients_subquery <- function(num_type, backend) {
 
@@ -152,10 +175,17 @@ patients_subquery <- function(num_type, backend) {
   }
 }
 
-#patients_subquery("num_temp")
-#patients_subquery("cohorte")
-
 #' get_patients
+#'
+#' For i2b2 and Dr.Warehouse
+#' Get the demographic informations of the patients in a cohort/num_temp.
+#'
+#' @param num the identifier of the cohort/num_temp
+#' @param num_type type of num: one of c('num_temp', 'cohorte')
+#' @param only_num set to `TRUE` if you only need the patient_nums (default = `FALSE`)
+#' @param count set to `TRUE` if you want to return the count of unique concepts for the patients
+#'  contained in a precomputed table named 'NEU_CONCEPT_COUNT'
+#' @param config
 #' @export
 get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = FALSE, config = NULL) {
 
@@ -226,10 +256,15 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
 
 }
 
-#patients <- get_patients('13624005402', 'cohorte',  config = config)
-#patients <- get_patients('13624005402', 'cohorte', only_num = FALSE, count = TRUE, config = config)
-
 #' get_concepts
+#' For Dr.Warehouse
+#'
+#' Get the concepts (e.g. UMLS concepts extracted from free text reports) for the patients in a cohort/num_temp.
+#'
+#' @param num the identifier of the cohort/num_temp
+#' @param num_type type of num: one of c('num_temp', 'cohorte')
+#' @param config a config environment created by the function getConfig.
+#' @return a data.frame
 #' @export
 get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
 
@@ -277,11 +312,32 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
 
 }
 
-# concepts <- get_concepts('13624005402', 'cohorte', config = config)
 
 #' get_data
+#'
+#' For Dr.Warehouse and i2b2
+#'
+#' Get the data (e.g. ICD codes or laboratory test results) for the patients in a cohort/num_temp.
+#'
+#' @param num the identifier of the cohort/num_temp
+#' @param num_type type of num: one of c('num_temp', 'cohorte')
+#' @param data_type type of data: one of c('bio_num', 'cim10'). 'bio_num' for biological test results with numeric value.
+#' 'cim10' for ICD10 codes
+#' @param config a config environment created by the function getConfig.
+#' @param ICD_prefix For i2b2. prefix of the CONCEPT_CDs for ICD codes (used to filter the CONCEPT_CDs) (default = 'CIM10')
+#' @param BIO_prefix For i2b2. prefix of the CONCEPT_CDs for labtest codes (used to filter the CONCEPT_CDs) (default = 'LOINC')
+#' @param use_scheme_key For i2b2. set to `TRUE` if you want to use a SCHEME_KEY column in OBSERVATION_FACT to filter the FACTS.
+#' if `TRUE`, the value of ICD_prefix or BIO_prefix are used to filter the FACTS.
+#' @param config a config environment created by the function getConfig.
+#' @return a data.frame
 #' @export
-get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NULL, ICD_prefix = 'CIM10') {
+get_data <- function(num = NULL,
+                     num_type = NULL,
+                     data_type = NULL,
+                     ICD_prefix = 'CIM10',
+                     BIO_prefix = 'LOINC',
+                     use_scheme_key = FALSE,
+                     config = NULL) {
 
   if (is.null(num) | is.null(num_type)) {
     stop('valid num and num_type are required')
@@ -296,6 +352,13 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
   }
 
   subquery <- patients_subquery(num_type, config$backend)
+  if (use_scheme_key) {
+    scheme_icd <- stringr::str_interp("O.SCHEME_KEY = '${ICD_prefix}:' AND")
+    scheme_bio <- stringr::str_interp("O.SCHEME_KEY = '${BIO_prefix}:' AND")
+  } else {
+    scheme_icd <- ""
+    scheme_bio <- ""
+  }
 
   if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
 
@@ -316,8 +379,9 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
                                  (CASE WHEN VALUEFLAG_CD = 'L' THEN 1 ELSE 0 END) as inf,
                                  (CASE WHEN VALUEFLAG_CD = 'H' THEN 1 ELSE 0 END) as sup
                                  FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
-                                 WHERE C.CONCEPT_CD LIKE 'LOINC%' AND
+                                 WHERE C.CONCEPT_CD LIKE '${BIO_prefix}%' AND
                                  C.CONCEPT_CD = O.CONCEPT_CD AND
+                                 ${scheme_icd}
                                  O.NVAL_NUM is not null AND
                                  O.VALUEFLAG_CD IN ('L', 'H', 'A') AND
                                  O.PATIENT_NUM in (${subquery} ${num} )
@@ -337,7 +401,7 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
                                  FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
                                  WHERE C.CONCEPT_CD LIKE '${ICD_prefix}%' AND
                                  C.CONCEPT_CD = O.CONCEPT_CD AND
-                                 O.SCHEME_KEY = '${ICD_prefix}:' AND
+                                 ${scheme_icd}
                                  O.PATIENT_NUM in (${subquery} ${num} )
                                  ")
     }
@@ -379,12 +443,36 @@ get_data <- function(num = NULL, num_type = NULL, data_type = NULL, config = NUL
   return(res)
 }
 
-#cim <- get_data('13624005579', 'cohorte', 'cim10', config = config)
-#bio <- get_data('13624005579', 'cohorte', 'bio_num', config = config)
-
 #' match_patient
+#' For Dr.Warehouse and i2b2
+#'
+#' Match n (n_match) patients given the gender (sexe),
+#' the birth_year (annee_nais) within a range (annee_range)
+#' the count of unique concepts (count_unique) within a range (count_range)
+#' excluding patients in a cohort/patient set
+#'
+#' @param num the identifier of the cohort/num_temp to exclude patients
+#' @param num_type type of num: one of c('num_temp', 'cohorte')
+#' @param sexe reference gender
+#' @param annee_nais reference birth_year
+#' @param annee_range integer >= 0 to compute the range of authorized birth_years for matching.
+#' the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]
+#' @param count_unique reference count of unique concepts
+#' @param count_range. float > 0 to compute the range of authorized count_unique for matching.
+#' the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]
+#' @param n_match: number of patients to match
+#' @param config a config environment created by the function getConfig.
+#' @return a vector of matched patient_nums
 #' @export
-match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais = NULL, annee_range = NULL, count_unique = NULL, count_range = NULL, n_match = NULL, config = NULL) {
+match_patient <- function(num = NULL,
+                          num_type = NULL,
+                          sexe = NULL,
+                          annee_nais = NULL,
+                          annee_range = NULL,
+                          count_unique = NULL,
+                          count_range = NULL,
+                          n_match = NULL,
+                          config = NULL) {
 
   subquery <- patients_subquery(num_type, config$backend)
 
@@ -431,21 +519,31 @@ match_patient <- function(num = NULL, num_type = NULL, sexe = NULL, annee_nais =
 
 }
 
-#set.seed(456)
-# match_patient('13624005579',
-#               'cohorte',
-#               sexe = patients$SEXE[1],
-#               annee_nais = patients$ANNEE_NAIS[1],
-#               annee_range = 5,
-#               count_unique = 120,
-#               count_range = 0.2,
-#               n_match = 5,
-#               config = config)
-
 #' match_patients_from_num
+#'
+#' For Dr.Warehouse and i2b2
+#' Match n (n_match) patients for each patient in a cohort/patient set.
+#'
+#' @param num the identifier of the cohort/num_temp
+#' @param num_type type of num: one of c('num_temp', 'cohorte')
+#' @param annee_range integer >= 0 to compute the range of authorized birth_years for matching.
+#' the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]
+#' @param count_range. float > 0 to compute the range of authorized count_unique for matching.
+#' the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]
+#' @param n_match: number of patients to match
+#' @param match_save For Dr.Warehouse (in i2b2 patient set is automatically saved). save the matched patients in a cohort (default = `FALSE`)
+#' @param match_save_title title for the saved cohort.
+#' @param config a config environment created by the function getConfig.
+#' @return the identifier of the matched cohort of patients
 #' @export
-match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = NULL, count_range = NULL, n_match = NULL,match_save= FALSE, match_save_title = NULL, config = NULL) {
-
+match_patients_from_num <- function(num = NULL,
+                                    num_type = NULL,
+                                    annee_range = NULL,
+                                    count_range = NULL,
+                                    n_match = NULL,
+                                    match_save= FALSE,
+                                    match_save_title = NULL,
+                                    config = NULL) {
 
 
   patients = get_patients(num, num_type, only_num = FALSE, count = TRUE, config);
@@ -499,9 +597,14 @@ match_patients_from_num <- function(num = NULL, num_type = NULL, annee_range = N
 
 }
 
-#controls <- match_patients_from_num(num = '13624005402', num_type= 'cohorte',annee_range = 5,count_range = 0.3,n_match = 5, config = config)
-
 #' insert_patients_into_dwh_resultat
+#'
+#' For Dr.Warehouse
+#' inser patients in DWH_RESULTAT
+#'
+#' @param patients a vector of patient_nums
+#' @param config a config environment created by the function getConfig.
+#' @return num_temp
 #' @export
 insert_patients_into_dwh_resultat <- function(patients,  config) {
 
@@ -530,6 +633,15 @@ insert_patients_into_dwh_resultat <- function(patients,  config) {
 
 }
 
+#' insert_patients_into_query_result_instance
+#'
+#' For i2b2
+#' inser patients in QUERY_RESULT_INSTANCE
+#'
+#' @param patients a vector of patient_nums
+#' @param config a config environment created by the function getConfig.
+#' @return result_id
+#' @export
 insert_patients_into_query_result_instance <- function(patients,  config) {
 
   sql = "SELECT nextval('i2b2demodata.qt_query_master_query_master_id_seq'::regclass)"
@@ -584,9 +696,15 @@ insert_patients_into_query_result_instance <- function(patients,  config) {
 
 }
 
-#num_control <- insert_patients_into_dwh_resultat(controls, config)
-
 #' create_cohorte
+#'
+#' For Dr.Warehouse
+#' creates a cohort
+#'
+#' @param titre_cohorte cohort title
+#' @param description_cohorte description of the cohort
+#' @param config a config environment created by the function getConfig.
+#' @return num_cohorte
 #' @export
 create_cohorte <- function(titre_cohorte, description_cohorte,username, config) {
   sql = "select dwh_seq.nextval num_cohorte from dual";
@@ -602,9 +720,13 @@ create_cohorte <- function(titre_cohorte, description_cohorte,username, config) 
 
 }
 
-#create_cohorte("cohorte_test", "cohorte de test", config$username, config )
-
 #' add_privilege_to_cohort
+#' For Dr. Warehouse
+#' @param num_cohorte cohort number
+#' @param username username
+#' @param privilege privilege
+#' @param config a config environment created by the function getConfig.
+#' @return 0
 #' @export
 add_privilege_to_cohort <- function(num_cohorte, username, privilege, config)
 {
@@ -617,9 +739,13 @@ add_privilege_to_cohort <- function(num_cohorte, username, privilege, config)
 
 }
 
-#add_privilege_to_cohort(13672749875, config$username, 'voir_stat', config)
-
 #' add_patients_to_cohort
+#' For Dr. Warehouse
+#' @param num_cohorte cohort number
+#' @param patient_nums vector of patient_nums
+#' @param username username
+#' @param config a config environment created by the function getConfig.
+#' @return 0
 #' @export
 add_patients_to_cohort <- function(num_cohorte, patient_nums, username, config) {
 
@@ -644,9 +770,13 @@ add_patients_to_cohort <- function(num_cohorte, patient_nums, username, config) 
   return(0)
 }
 
-#add_patients_to_cohort(num_cohorte, patient_nums, config$username, config)
-
 #' get_patients_counts_from_dwh
+#'
+#' For Dr. Warehouse
+#'
+#' creates a table with the count of unique concepts per patients.
+#' @param config a config environment created by the function getConfig.
+#'
 #' @export
 get_patients_counts_from_dwh <- function(config = config) {
 
@@ -671,11 +801,5 @@ get_patients_counts_from_dwh <- function(config = config) {
                 GROUP BY patient_num) d
                 ON p.PATIENT_NUM = d.patient_num)', config, data = F)
   }
-
-  # retrieve counts
-  # oracleQuery('SELECT c.PATIENT_NUM, c.COUNT_UNIQUE, c.COUNT_D_TOTAL, p.DATENAIS, p.SEXE, p.CP, p.PAYS, p.PAYS_NAISSANCE, p.CODE_DECES, TO_NUMBER(TO_CHAR(p.DATENAIS, \'YYYY\')) as ANNEE_NAIS
-  #             from NEU_CONCEPTS_COUNTS c
-  #             LEFT JOIN dwh_patient p
-  #             on p.PATIENT_NUM = c.PATIENT_NUM', config)
 
   }

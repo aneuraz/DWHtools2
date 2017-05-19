@@ -1,6 +1,11 @@
 #' oracleQuery
+#'
+#' This function performs SQL queries to a database and returns the results.
+#'
 #' @param query SQL query in a character string
 #' @param configFile location of the config file (default = 'config')
+#' @param update set to `TRUE` if the query is an update. (default = `FALSE`)
+#' @param data set to `TRUE` if the query returns data (default = `TRUE`)
 #' @return the result of the query (data.frame)
 #' @export
 oracleQuery <- function(query, config = config, update = F, data = T) {

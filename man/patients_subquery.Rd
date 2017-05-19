@@ -4,8 +4,17 @@
 \alias{patients_subquery}
 \title{patients_subquery}
 \usage{
-patients_subquery(num_type)
+patients_subquery(num_type, backend)
+}
+\arguments{
+\item{num_type}{one of c('num_temp', 'cohorte')}
+
+\item{backend}{one of c('i2b2_oracle','i2b2_postgres', 'drwh_oracle' )}
+}
+\value{
+SQL subquery
 }
 \description{
-patients_subquery
+For i2b2 and Dr.Warehouse
+Get the patients SQL subquery corresponding to the type cohort/num_temp and the backend Dr.Warehouse/i2b2
 }

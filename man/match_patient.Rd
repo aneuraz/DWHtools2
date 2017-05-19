@@ -2,12 +2,40 @@
 % Please edit documentation in R/queries.R
 \name{match_patient}
 \alias{match_patient}
-\title{match_patient}
+\title{match_patient
+For Dr.Warehouse and i2b2}
 \usage{
 match_patient(num = NULL, num_type = NULL, sexe = NULL,
   annee_nais = NULL, annee_range = NULL, count_unique = NULL,
   count_range = NULL, n_match = NULL, config = NULL)
 }
+\arguments{
+\item{num}{the identifier of the cohort/num_temp to exclude patients}
+
+\item{num_type}{type of num: one of c('num_temp', 'cohorte')}
+
+\item{sexe}{reference gender}
+
+\item{annee_nais}{reference birth_year}
+
+\item{annee_range}{integer >= 0 to compute the range of authorized birth_years for matching.
+the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]}
+
+\item{count_unique}{reference count of unique concepts}
+
+\item{config}{a config environment created by the function getConfig.}
+
+\item{count_range.}{float > 0 to compute the range of authorized count_unique for matching.
+the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]}
+
+\item{n_match:}{number of patients to match}
+}
+\value{
+a vector of matched patient_nums
+}
 \description{
-match_patient
+Match n (n_match) patients given the gender (sexe),
+the birth_year (annee_nais) within a range (annee_range)
+the count of unique concepts (count_unique) within a range (count_range)
+excluding patients in a cohort/patient set
 }

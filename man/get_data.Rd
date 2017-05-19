@@ -4,8 +4,35 @@
 \alias{get_data}
 \title{get_data}
 \usage{
-get_data(num = NULL, num_type = NULL, data_type = NULL, config = NULL)
+get_data(num = NULL, num_type = NULL, data_type = NULL,
+  ICD_prefix = "CIM10", BIO_prefix = "LOINC", use_scheme_key = FALSE,
+  config = NULL)
+}
+\arguments{
+\item{num}{the identifier of the cohort/num_temp}
+
+\item{num_type}{type of num: one of c('num_temp', 'cohorte')}
+
+\item{data_type}{type of data: one of c('bio_num', 'cim10'). 'bio_num' for biological test results with numeric value.
+'cim10' for ICD10 codes}
+
+\item{ICD_prefix}{For i2b2. prefix of the CONCEPT_CDs for ICD codes (used to filter the CONCEPT_CDs) (default = 'CIM10')}
+
+\item{BIO_prefix}{For i2b2. prefix of the CONCEPT_CDs for labtest codes (used to filter the CONCEPT_CDs) (default = 'LOINC')}
+
+\item{use_scheme_key}{For i2b2. set to `TRUE` if you want to use a SCHEME_KEY column in OBSERVATION_FACT to filter the FACTS.
+if `TRUE`, the value of ICD_prefix or BIO_prefix are used to filter the FACTS.}
+
+\item{config}{a config environment created by the function getConfig.}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+a data.frame
 }
 \description{
-get_data
+For Dr.Warehouse and i2b2
+}
+\details{
+Get the data (e.g. ICD codes or laboratory test results) for the patients in a cohort/num_temp.
 }

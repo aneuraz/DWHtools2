@@ -6,6 +6,18 @@
 \usage{
 get_num_temp_list(username = NULL, only_num = FALSE, config = NULL)
 }
+\arguments{
+\item{username}{a username (string)}
+
+\item{only_num}{set to `TRUE` if you want only a vector of num_temp numbers. Set to `FALSE`
+if you also need the number of patients (default = `FALSE`)}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+a data.frame with the list of num_temps
+}
 \description{
-get_num_temp_list
+For Dr.Warehouse
+Get the list of recent queries results for a given username.
 }

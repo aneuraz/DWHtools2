@@ -6,6 +6,17 @@
 \usage{
 create_cohorte(titre_cohorte, description_cohorte, username, config)
 }
+\arguments{
+\item{titre_cohorte}{cohort title}
+
+\item{description_cohorte}{description of the cohort}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+num_cohorte
+}
 \description{
-create_cohorte
+For Dr.Warehouse
+creates a cohort
 }

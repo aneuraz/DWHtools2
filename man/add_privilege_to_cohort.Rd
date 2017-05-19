@@ -2,10 +2,24 @@
 % Please edit documentation in R/queries.R
 \name{add_privilege_to_cohort}
 \alias{add_privilege_to_cohort}
-\title{add_privilege_to_cohort}
+\title{add_privilege_to_cohort
+For Dr. Warehouse}
 \usage{
 add_privilege_to_cohort(num_cohorte, username, privilege, config)
 }
+\arguments{
+\item{num_cohorte}{cohort number}
+
+\item{username}{username}
+
+\item{privilege}{privilege}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+0
+}
 \description{
 add_privilege_to_cohort
+For Dr. Warehouse
 }

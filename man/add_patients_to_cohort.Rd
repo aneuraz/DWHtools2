@@ -2,10 +2,24 @@
 % Please edit documentation in R/queries.R
 \name{add_patients_to_cohort}
 \alias{add_patients_to_cohort}
-\title{add_patients_to_cohort}
+\title{add_patients_to_cohort
+For Dr. Warehouse}
 \usage{
 add_patients_to_cohort(num_cohorte, patient_nums, username, config)
 }
+\arguments{
+\item{num_cohorte}{cohort number}
+
+\item{patient_nums}{vector of patient_nums}
+
+\item{username}{username}
+
+\item{config}{a config environment created by the function getConfig.}
+}
+\value{
+0
+}
 \description{
 add_patients_to_cohort
+For Dr. Warehouse
 }

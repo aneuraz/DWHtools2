@@ -9,11 +9,15 @@ oracleQuery(query, config = config, update = F, data = T)
 \arguments{
 \item{query}{SQL query in a character string}
 
+\item{update}{set to `TRUE` if the query is an update. (default = `FALSE`)}
+
+\item{data}{set to `TRUE` if the query returns data (default = `TRUE`)}
+
 \item{configFile}{location of the config file (default = 'config')}
 }
 \value{
 the result of the query (data.frame)
 }
 \description{
-oracleQuery
+This function performs SQL queries to a database and returns the results.
 }
