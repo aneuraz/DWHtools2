@@ -4,7 +4,7 @@
 \alias{patients_subquery}
 \title{patients_subquery}
 \usage{
-patients_subquery(num_type)
+patients_subquery(num_type, backend)
 }
 \description{
 patients_subquery

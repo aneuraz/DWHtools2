@@ -4,7 +4,8 @@
 \alias{get_data}
 \title{get_data}
 \usage{
-get_data(num = NULL, num_type = NULL, data_type = NULL, config = NULL)
+get_data(num = NULL, num_type = NULL, data_type = NULL, config = NULL,
+  ICD_prefix = "CIM10")
 }
 \description{
 get_data
