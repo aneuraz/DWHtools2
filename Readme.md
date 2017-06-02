@@ -12,6 +12,11 @@ We will assume here that you have already configured the tools needed
 for the connection to the database. The package can handle Oracle and
 Postgres back-ends.
 
+### Install from github
+
+    if(!require(devtools)) install.packages('devtools')
+    devtools::install_github('aneuraz/DWHtools2')
+
 ### Config file
 
 The first thing to do to use this package is to create a text file
@@ -39,3 +44,14 @@ An example for Oracle:
     dbpass="<PWD>"
     username="DWHUSER"
     backend="drwh_oracle"
+
+Usage
+-----
+
+Load the package:
+
+    library(DWHtools2)
+
+First, you need to get your config information:
+
+    config <- getConfig('<NAME_OF_YOUR_CONFIG_FILE>')

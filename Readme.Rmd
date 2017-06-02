@@ -10,6 +10,14 @@ It contains 2 generic functions that allow to perform any SQL query as well as m
 
 We will assume here that you have already configured the tools needed for the connection to the database. The package can handle Oracle and Postgres back-ends. 
 
+### Install from github
+
+```{r, eval = F}
+if(!require(devtools)) install.packages('devtools')
+devtools::install_github('aneuraz/DWHtools2')
+```
+
+
 ### Config file
 
 The first thing to do to use this package is to create a text file containing the information for the connection to the database. 
@@ -34,3 +42,17 @@ dbpass="<PWD>"
 username="DWHUSER"
 backend="drwh_oracle"
 ```
+
+## Usage
+
+Load the package: 
+```{r, eval = F}
+library(DWHtools2)
+```
+
+First, you need to get your config information:
+```{r, eval = F}
+config <- getConfig('<NAME_OF_YOUR_CONFIG_FILE>')
+```
+
+
