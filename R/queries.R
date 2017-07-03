@@ -203,7 +203,7 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
 
   if (config$backend == 'i2b2_oracle' | config$backend == 'i2b2_postgres') {
     if (!only_num) {
-      columns <- "p.PATIENT_NUM, birth_date as DATENAIS, SEX_CD as SEXE, zip_cd as CP, null as PAYS, null as PAYS_NAISSANCE, vital_status_cd as CODE_DECES, TO_CHAR(birth_date, 'YYYY') as ANNEE_NAIS"
+      columns <- "p.PATIENT_NUM, birth_date , SEX_CD as SEX,  vital_status_cd as  vital_status, TO_CHAR(birth_date, 'YYYY') as birth_year"
     } else {
       columns <- "p.PATIENT_NUM"
     }
@@ -227,7 +227,7 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
   } else if (config$backend == 'drwh_oracle') {
 
     if (!only_num) {
-      columns <- "p.PATIENT_NUM, p.DATENAIS, p.SEXE, p.CP, p.PAYS, p.PAYS_NAISSANCE, p.CODE_DECES, TO_CHAR(p.DATENAIS, 'YYYY') as ANNEE_NAIS"
+      columns <- "p.PATIENT_NUM, p.DATENAIS as birth_date, p.SEXE as SEX, p.CODE_DECES as vital_status, TO_CHAR(p.DATENAIS, 'YYYY') as birth_year"
     } else {
       columns <- "p.PATIENT_NUM"
     }
@@ -235,7 +235,7 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
     subquery <- patients_subquery(num_type, config$backend)
 
     if (count) {
-      columns <- paste(columns, ", c.COUNT_UNIQUE")
+      columns <- paste(columns, ", c.COUNT_UNIQUE as UNIQ_CONCEPTS")
       count_query <- "LEFT JOIN NEU_CONCEPTS_COUNTS c
       on p.PATIENT_NUM = c.PATIENT_NUM
       ";
@@ -282,9 +282,17 @@ get_concepts <- function(num = NULL, num_type = NULL, config = NULL) {
 
   subquery <- patients_subquery(num_type, config$backend)
 
-  sql <- stringr::str_interp("SELECT e.PATIENT_NUM, e.IEP, e.DATE_DOCUMENT, e.ORIGINE_DOC, e.AGE_PATIENT, e.CERTITUDE,e.CONTEXTE, e.CODE_THESAURUS,
-  e.CODE, e.TFIDF_CODE_DOCUMENT, e.NB_CODE, thes.NIVEAU, thes.CODE_LIBELLE, thes.NB_PATIENT, thes.GENOTYPE, thes.PHENOTYPE, thes.CHEMIN_LIBELLE, thes.CODE_LIBELLE_EN,
-                             thes.CODE_PERE, thes.CODE_LIBELLE_PERE, thes.CODE_LIBELLE_PERE_EN
+  sql <- stringr::str_interp("SELECT e.PATIENT_NUM,
+e.IEP as ENCOUNTER_NUM,
+e.DATE_DOCUMENT as DOCUMENT_DATE,
+e.ORIGINE_DOC as DOCUMENT_ORIGIN,
+e.CERTITUDE as CONCEPT_CERTITUDE,
+e.CONTEXTE as CONCEPT_CONTEXT,
+  e.CODE, thes.CODE_LIBELLE as CODE_LABEL,
+thes.GENOTYPE, thes.PHENOTYPE, thes.CHEMIN_LIBELLE as LABEL_PATH,
+thes.CODE_LIBELLE_EN as CODE_LABEL_EN,
+thes.CODE_PERE as PARENT_CODE, thes.CODE_LIBELLE_PERE as PARENT_LABEL,
+thes.CODE_LIBELLE_PERE_EN as PARENT_LABEL_EN
                              FROM DWH_ENRSEM e
                              LEFT JOIN (SELECT  t.NIVEAU, t.CODE_LIBELLE , t.NB_PATIENT, t.GENOTYPE, t.PHENOTYPE, t.CHEMIN_LIBELLE, t.CODE, t.CODE_LIBELLE_EN,
                              p.code_pere,

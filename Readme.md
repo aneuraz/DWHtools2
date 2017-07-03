@@ -1,6 +1,8 @@
 This package helps to perform SQL queries in 2 different clinical datawarehouses: i2b2 and Dr.Warehouse. 
 It contains 2 generic functions that allow to perform any SQL query as well as more specific queries allowing to query specific information. For example, the function `get_patients` will return demographic information from a patient cohort. 
 
+It as been tested only on MacOSX and Linux systems. As it uses the library `parallel` for parallel processing, it should not work on Windows. 
+
 ## Setup
 
 We will assume here that you have already configured the tools needed for the connection to the database. The package can handle Oracle and Postgres back-ends. 
@@ -17,7 +19,7 @@ devtools::install_github('aneuraz/DWHtools2')
 The first thing to do to use this package is to create a text file containing the information for the connection to the database. 
 Here is a description of this file: 
 
-- driverClass: The Oracle JDBC driver class that implements the java.sql.Driver interface
+- driverClass: The Oracle/Postgres JDBC driver class that implements the java.sql.Driver interface
 - classPath: The path to the driver
 - connectPath: The connection path to the database 
 - dbuser: The database user 
