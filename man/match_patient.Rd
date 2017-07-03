@@ -5,28 +5,28 @@
 \title{match_patient
 For Dr.Warehouse and i2b2}
 \usage{
-match_patient(num = NULL, num_type = NULL, sexe = NULL,
-  annee_nais = NULL, annee_range = NULL, count_unique = NULL,
-  count_range = NULL, n_match = NULL, config = NULL)
+match_patient(num = NULL, num_type = NULL, sex = NULL,
+  birth_year = NULL, birth_range = NULL, uniq_concepts = NULL,
+  concepts_range = NULL, n_match = NULL, config = NULL)
 }
 \arguments{
 \item{num}{the identifier of the cohort/num_temp to exclude patients}
 
 \item{num_type}{type of num: one of c('num_temp', 'cohorte')}
 
-\item{sexe}{reference gender}
+\item{birth_year}{reference birth_year}
 
-\item{annee_nais}{reference birth_year}
+\item{birth_range}{integer >= 0 to compute the range of authorized birth_years for matching.
+the range will be: [birth_years - birth_range ; birth_year + birth_range]}
 
-\item{annee_range}{integer >= 0 to compute the range of authorized birth_years for matching.
-the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]}
-
-\item{count_unique}{reference count of unique concepts}
+\item{uniq_concepts}{reference count of unique concepts}
 
 \item{config}{a config environment created by the function getConfig.}
 
-\item{count_range.}{float > 0 to compute the range of authorized count_unique for matching.
-the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]}
+\item{sexe}{reference gender}
+
+\item{concepts_range.}{float > 0 to compute the range of authorized uniq_concepts for matching.
+the range will be: [uniq_concepts - (uniq_concepts * concepts_range) ; uniq_concepts + (uniq_concepts * concepts_range)]}
 
 \item{n_match:}{number of patients to match}
 }
@@ -35,7 +35,7 @@ a vector of matched patient_nums
 }
 \description{
 Match n (n_match) patients given the gender (sexe),
-the birth_year (annee_nais) within a range (annee_range)
-the count of unique concepts (count_unique) within a range (count_range)
+the birth_year (birth_year) within a range (birth_range)
+the count of unique concepts (uniq_concepts) within a range (concepts_range)
 excluding patients in a cohort/patient set
 }

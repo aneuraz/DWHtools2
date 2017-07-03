@@ -211,7 +211,7 @@ get_patients <- function(num = NULL, num_type = NULL, only_num = FALSE, count = 
     subquery <- patients_subquery(num_type, config$backend)
 
     if (count) {
-      columns <- paste(columns, ", c.COUNT_UNIQUE")
+      columns <- paste(columns, ", c.COUNT_UNIQUE as UNIQ_CONCEPTS")
       count_query <- "LEFT JOIN NEU_CONCEPTS_COUNTS c
       on p.PATIENT_NUM = c.PATIENT_NUM
       ";
@@ -289,7 +289,7 @@ e.ORIGINE_DOC as DOCUMENT_ORIGIN,
 e.CERTITUDE as CONCEPT_CERTITUDE,
 e.CONTEXTE as CONCEPT_CONTEXT,
   e.CODE, thes.CODE_LIBELLE as CODE_LABEL,
-thes.GENOTYPE, thes.PHENOTYPE, thes.CHEMIN_LIBELLE as LABEL_PATH,
+thes.GENOTYPE, thes.PHENOTYPE,
 thes.CODE_LIBELLE_EN as CODE_LABEL_EN,
 thes.CODE_PERE as PARENT_CODE, thes.CODE_LIBELLE_PERE as PARENT_LABEL,
 thes.CODE_LIBELLE_PERE_EN as PARENT_LABEL_EN
@@ -373,17 +373,13 @@ get_data <- function(num = NULL,
     if (data_type == 'bio_num') {
 
       sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
-                                 O.ENCOUNTER_NUM as IEP,
+                                 O.ENCOUNTER_NUM,
                                  O.CONCEPT_CD as CODE,
-                                 C.NAME_CHAR as CODE_LIBELLE,
+                                 C.NAME_CHAR as CODE_LABEL,
                                  O.NVAL_NUM as VAL_NUMERIC,
-                                 O.START_DATE as DATE_DOCUMENT,
-                                 null as BORNE_INF,
-                                 null as BORNE_SUP,
-                                 null as ID_THESAURUS_DATA,
-                                 C.NAME_CHAR as LIBELLE_PARENT,
-                                 O.CONCEPT_CD as CODE_PARENT,
-                                 VALUEFLAG_CD,
+                                 O.START_DATE as DOCUMENT_DATE,
+                                 C.NAME_CHAR as PARENT_LABEL,
+                                 O.CONCEPT_CD as PARENT_CODE,
                                  (CASE WHEN VALUEFLAG_CD = 'L' THEN 1 ELSE 0 END) as inf,
                                  (CASE WHEN VALUEFLAG_CD = 'H' THEN 1 ELSE 0 END) as sup
                                  FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
@@ -398,14 +394,13 @@ get_data <- function(num = NULL,
     } else if (data_type == 'cim10' ) {
 
       sql <- stringr::str_interp("SELECT O.PATIENT_NUM,
-                                 O.ENCOUNTER_NUM as IEP,
+                                 O.ENCOUNTER_NUM,
                                  O.CONCEPT_CD as CODE,
-                                 C.NAME_CHAR as CODE_LIBELLE,
+                                 C.NAME_CHAR as CODE_LABEL,
                                  O.NVAL_NUM as VAL_NUMERIC,
-                                 O.START_DATE as DATE_DOCUMENT,
-                                 null as ID_THESAURUS_DATA,
-                                 C.NAME_CHAR as LIBELLE_PARENT,
-                                 O.CONCEPT_CD as CODE_PARENT
+                                 O.START_DATE as DOCUMENT_DATE,
+                                 C.NAME_CHAR as PAREN_LABEL,
+                                 O.CONCEPT_CD as PARENT_CODE
                                  FROM i2b2demodata.OBSERVATION_FACT O, i2b2demodata.CONCEPT_DIMENSION C
                                  WHERE C.CONCEPT_CD LIKE '${ICD_prefix}%' AND
                                  C.CONCEPT_CD = O.CONCEPT_CD AND
@@ -417,8 +412,9 @@ get_data <- function(num = NULL,
   } else if (config$backend == 'drwh_oracle') {
     if (data_type == 'bio_num') {
 
-      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_NUMERIC, d.DATE_DOCUMENT,
-                                 d.BORNE_INF, d.BORNE_SUP, d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT,
+      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP as ENCONUTER_NUM, t.CODE,
+t.CODE_LIBELLE as CODE_LABEL, d.VAL_NUMERIC, d.DATE_DOCUMENT as DOCUMENT_DATE,
+                                  tt.code_libelle AS PARENT_LABEL,
                                  (CASE WHEN d.VAL_NUMERIC < d.BORNE_INF THEN 1 ELSE 0 END) AS inf,
                                  (CASE WHEN d.VAL_NUMERIC > d.BORNE_SUP THEN 1 ELSE 0 END) AS sup
                                  FROM DWH_DATA d
@@ -434,8 +430,9 @@ get_data <- function(num = NULL,
 
     } else if (data_type == 'cim10' ) {
 
-      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP, t.CODE, t.CODE_LIBELLE, d.VAL_TEXTE, d.DATE_DOCUMENT,
-                                 d.ID_THESAURUS_DATA , tt.code_libelle AS LIBELLE_PARENT, tt.code as CODE_PARENT
+      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP as ENCOUNTER_NUM, t.CODE, t.CODE_LIBELLE as CODE_LABEL,
+                                d.VAL_TEXTE as TEXT_VAL, d.DATE_DOCUMENT as DATE_DOCUMENT,
+                                 tt.code_libelle AS PARENT_LABEL, tt.code as PARENT_CODE
                                  FROM DWH_DATA d
                                  LEFT JOIN DWH_THESAURUS_DATA t
                                  ON d.id_thesaurus_data = t.ID_THESAURUS_DATA
@@ -455,30 +452,30 @@ get_data <- function(num = NULL,
 #' For Dr.Warehouse and i2b2
 #'
 #' Match n (n_match) patients given the gender (sexe),
-#' the birth_year (annee_nais) within a range (annee_range)
-#' the count of unique concepts (count_unique) within a range (count_range)
+#' the birth_year (birth_year) within a range (birth_range)
+#' the count of unique concepts (uniq_concepts) within a range (concepts_range)
 #' excluding patients in a cohort/patient set
 #'
 #' @param num the identifier of the cohort/num_temp to exclude patients
 #' @param num_type type of num: one of c('num_temp', 'cohorte')
 #' @param sexe reference gender
-#' @param annee_nais reference birth_year
-#' @param annee_range integer >= 0 to compute the range of authorized birth_years for matching.
-#' the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]
-#' @param count_unique reference count of unique concepts
-#' @param count_range. float > 0 to compute the range of authorized count_unique for matching.
-#' the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]
+#' @param birth_year reference birth_year
+#' @param birth_range integer >= 0 to compute the range of authorized birth_years for matching.
+#' the range will be: [birth_years - birth_range ; birth_year + birth_range]
+#' @param uniq_concepts reference count of unique concepts
+#' @param concepts_range. float > 0 to compute the range of authorized uniq_concepts for matching.
+#' the range will be: [uniq_concepts - (uniq_concepts * concepts_range) ; uniq_concepts + (uniq_concepts * concepts_range)]
 #' @param n_match: number of patients to match
 #' @param config a config environment created by the function getConfig.
 #' @return a vector of matched patient_nums
 #' @export
 match_patient <- function(num = NULL,
                           num_type = NULL,
-                          sexe = NULL,
-                          annee_nais = NULL,
-                          annee_range = NULL,
-                          count_unique = NULL,
-                          count_range = NULL,
+                          sex = NULL,
+                          birth_year = NULL,
+                          birth_range = NULL,
+                          uniq_concepts = NULL,
+                          concepts_range = NULL,
                           n_match = NULL,
                           config = NULL) {
 
@@ -491,9 +488,9 @@ match_patient <- function(num = NULL,
                                  LEFT JOIN i2b2demodata.PATIENT_DIMENSION p
                                  ON c.PATIENT_NUM = p.PATIENT_NUM
                                  WHERE p.PATIENT_NUM not in  ( ${subquery} ${num} ) AND
-                                 p.SEX_CD = '${sexe}'
-                                 and TO_NUMBER(TO_CHAR(p.BIRTH_DATE, 'YYYY'), '9999') between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
-                                 and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
+                                 p.SEX_CD = '${sex}'
+                                 and TO_NUMBER(TO_CHAR(p.BIRTH_DATE, 'YYYY'), '9999') between (${birth_year} - ${birth_range}) and (${birth_year} + ${birth_range})
+                                 and c.COUNT_UNIQUE between (${uniq_concepts} - ${uniq_concepts}*${concepts_range}) and (${uniq_concepts} + ${uniq_concepts}*${concepts_range})
                                  ORDER BY c.PATIENT_NUM) r")
 
   } else if (config$backend == 'drwh_oracle') {
@@ -504,9 +501,9 @@ match_patient <- function(num = NULL,
                                LEFT JOIN dwh_patient p
                                on p.PATIENT_NUM = c.PATIENT_NUM
                                WHERE p.PATIENT_NUM NOT IN ( ${subquery} ${num} )
-                               and p.SEXE = '${sexe}'
-                               and TO_NUMBER(TO_CHAR(p.DATENAIS, 'YYYY')) between (${annee_nais} - ${annee_range}) and (${annee_nais} + ${annee_range})
-                               and c.COUNT_UNIQUE between (${count_unique} - ${count_unique}*${count_range}) and (${count_unique} + ${count_unique}*${count_range})
+                               and p.SEXE = '${sex}'
+                               and TO_NUMBER(TO_CHAR(p.DATENAIS, 'YYYY')) between (${birth_year} - ${birth_range}) and (${birth_year} + ${birth_range})
+                               and c.COUNT_UNIQUE between (${uniq_concepts} - ${uniq_concepts}*${concepts_range}) and (${uniq_concepts} + ${uniq_concepts}*${concepts_range})
                                order by PATIENT_NUM) r
                                ")
 
@@ -534,10 +531,10 @@ match_patient <- function(num = NULL,
 #'
 #' @param num the identifier of the cohort/num_temp
 #' @param num_type type of num: one of c('num_temp', 'cohorte')
-#' @param annee_range integer >= 0 to compute the range of authorized birth_years for matching.
-#' the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]
-#' @param count_range. float > 0 to compute the range of authorized count_unique for matching.
-#' the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]
+#' @param birth_range integer >= 0 to compute the range of authorized birth_years for matching.
+#' the range will be: [birth_year - birth_range ; birth_year + birth_range]
+#' @param concepts_range. float > 0 to compute the range of authorized uniq_concepts for matching.
+#' the range will be: [uniq_concepts - (uniq_concepts * concepts_range) ; uniq_concepts + (uniq_concepts * concepts_range)]
 #' @param n_match: number of patients to match
 #' @param match_save For Dr.Warehouse (in i2b2 patient set is automatically saved). save the matched patients in a cohort (default = `FALSE`)
 #' @param match_save_title title for the saved cohort.
@@ -546,8 +543,8 @@ match_patient <- function(num = NULL,
 #' @export
 match_patients_from_num <- function(num = NULL,
                                     num_type = NULL,
-                                    annee_range = NULL,
-                                    count_range = NULL,
+                                    birth_range = NULL,
+                                    concepts_range = NULL,
                                     n_match = NULL,
                                     match_save= FALSE,
                                     match_save_title = NULL,
@@ -561,21 +558,21 @@ match_patients_from_num <- function(num = NULL,
   parallel::clusterEvalQ(cl, {library(dplyr); library(stringr); library(MASS); library(tidyr);library(broom);library(DWHtools2);library(boot)})
   parallel::clusterExport(cl, "match_patient")
 
-  res_temp <- parallel::parLapply(cl, 1:nrow(patients) , fun= function(x, patients, num, num_type, annee_range, count_range, n_match, config) {
-    match_patient(num, num_type, patients[x,'SEXE'], patients[x,'ANNEE_NAIS'],annee_range, patients[x,'COUNT_UNIQUE'],  count_range, n_match, config)
-  }, patients= patients, num = num, num_type = num_type, annee_range = annee_range, count_range = count_range, n_match = n_match, config = config)
+  res_temp <- parallel::parLapply(cl, 1:nrow(patients) , fun= function(x, patients, num, num_type, birth_range, concepts_range, n_match, config) {
+    match_patient(num, num_type, patients[x,'SEX'], patients[x,'BIRTH_YEAR'],birth_range, patients[x,'UNIQ_CONCEPTS'],  concepts_range, n_match, config)
+  }, patients= patients, num = num, num_type = num_type, birth_range = birth_range, concepts_range = concepts_range, n_match = n_match, config = config)
   parallel::stopCluster(cl)
 
  #  res_temp = list()
  #  for (i in (1:nrow(patients))) {
  #    print(i)
- #    res_temp[i] = list(match_patient(num, num_type, patients[i,'SEXE'], patients[i,'ANNEE_NAIS'],annee_range, patients[i,'COUNT_UNIQUE'],  count_range, n_match, config)
+ #    res_temp[i] = list(match_patient(num, num_type, patients[i,'SEXE'], patients[i,'ANNEE_NAIS'],birth_range, patients[i,'UNIQ_CONCEPTS'],  concepts_range, n_match, config)
  # ) }
 
   result <- as.vector(unlist(res_temp))
 
   # data <- apply(patients, 1, function(p) {
-  #   match_patient(num, num_type, p['SEXE'], p['ANNEE_NAIS'],annee_range, p['COUNT_UNIQUE'],  count_range, n_match, config)
+  #   match_patient(num, num_type, p['SEXE'], p['ANNEE_NAIS'],birth_range, p['UNIQ_CONCEPTS'],  concepts_range, n_match, config)
   # })
   #
   # data <- as.vector(data)
@@ -798,7 +795,7 @@ get_patients_counts_from_dwh <- function(config = config) {
     # create new concept counts
     oracleQuery('CREATE TABLE NEU_CONCEPTS_COUNTS as
                 (SELECT e.*, d.min_date, max_date, duree_suivi, count_doc, (SELECT max(D_MAJ) from DWH_ENRSEM) AS d_maj from
-                (SELECT patient_num, count(DISTINCT certitude ||code) as count_unique, count (certitude ||code) as count_total
+                (SELECT patient_num, count(DISTINCT certitude ||code) as uniq_concepts, count (certitude ||code) as count_total
                 FROM dwh_enrsem
                 WHERE contexte=\'texte_patient\'
                 GROUP BY patient_num) e

@@ -4,8 +4,8 @@
 \alias{match_patients_from_num}
 \title{match_patients_from_num}
 \usage{
-match_patients_from_num(num = NULL, num_type = NULL, annee_range = NULL,
-  count_range = NULL, n_match = NULL, match_save = FALSE,
+match_patients_from_num(num = NULL, num_type = NULL, birth_range = NULL,
+  concepts_range = NULL, n_match = NULL, match_save = FALSE,
   match_save_title = NULL, config = NULL)
 }
 \arguments{
@@ -13,8 +13,8 @@ match_patients_from_num(num = NULL, num_type = NULL, annee_range = NULL,
 
 \item{num_type}{type of num: one of c('num_temp', 'cohorte')}
 
-\item{annee_range}{integer >= 0 to compute the range of authorized birth_years for matching.
-the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]}
+\item{birth_range}{integer >= 0 to compute the range of authorized birth_years for matching.
+the range will be: [birth_year - birth_range ; birth_year + birth_range]}
 
 \item{match_save}{For Dr.Warehouse (in i2b2 patient set is automatically saved). save the matched patients in a cohort (default = `FALSE`)}
 
@@ -22,8 +22,8 @@ the range will be: [annee_naiss - annee_range ; annee_nais + annee_range]}
 
 \item{config}{a config environment created by the function getConfig.}
 
-\item{count_range.}{float > 0 to compute the range of authorized count_unique for matching.
-the range will be: [count_unique - (count_unique * count_range) ; count_unique + (count_unique * count_range)]}
+\item{concepts_range.}{float > 0 to compute the range of authorized uniq_concepts for matching.
+the range will be: [uniq_concepts - (uniq_concepts * concepts_range) ; uniq_concepts + (uniq_concepts * concepts_range)]}
 
 \item{n_match:}{number of patients to match}
 }

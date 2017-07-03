@@ -15,6 +15,3 @@ For Dr. Warehouse
 \details{
 creates a table with the count of unique concepts per patients.
 }
-\description{
-get_patients_counts_from_dwh
-}
