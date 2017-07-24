@@ -288,11 +288,11 @@ e.DATE_DOCUMENT as DOCUMENT_DATE,
 e.ORIGINE_DOC as DOCUMENT_ORIGIN,
 e.CERTITUDE as CONCEPT_CERTITUDE,
 e.CONTEXTE as CONCEPT_CONTEXT,
-  e.CODE, thes.CODE_LIBELLE as CODE_LABEL,
+  e.CODE, thes.CODE_LIBELLE as CODE_LABEL_FR,
 thes.GENOTYPE, thes.PHENOTYPE,
-thes.CODE_LIBELLE_EN as CODE_LABEL_EN,
-thes.CODE_PERE as PARENT_CODE, thes.CODE_LIBELLE_PERE as PARENT_LABEL,
-thes.CODE_LIBELLE_PERE_EN as PARENT_LABEL_EN
+thes.CODE_LIBELLE_EN as CODE_LABEL,
+thes.CODE_PERE as PARENT_CODE, thes.CODE_LIBELLE_PERE as PARENT_LABEL_FR,
+thes.CODE_LIBELLE_PERE_EN as PARENT_LABEL
                              FROM DWH_ENRSEM e
                              LEFT JOIN (SELECT  t.NIVEAU, t.CODE_LIBELLE , t.NB_PATIENT, t.GENOTYPE, t.PHENOTYPE, t.CHEMIN_LIBELLE, t.CODE, t.CODE_LIBELLE_EN,
                              p.code_pere,
@@ -412,7 +412,7 @@ get_data <- function(num = NULL,
   } else if (config$backend == 'drwh_oracle') {
     if (data_type == 'bio_num') {
 
-      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP as ENCONUTER_NUM, t.CODE,
+      sql <- stringr::str_interp("SELECT d.PATIENT_NUM, d.IEP as ENCOUNTER_NUM, t.CODE,
 t.CODE_LIBELLE as CODE_LABEL, d.VAL_NUMERIC, d.DATE_DOCUMENT as DOCUMENT_DATE,
                                   tt.code_libelle AS PARENT_LABEL,
                                  (CASE WHEN d.VAL_NUMERIC < d.BORNE_INF THEN 1 ELSE 0 END) AS inf,
