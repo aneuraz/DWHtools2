@@ -7,7 +7,7 @@ Maintainer: Antoine Neuraz <antoine.neuraz@gmail.com>
 Description: tools to query DWH
 License: MIT
 Encoding: UTF-8
-Imports: stringr, parallel,RJDBC
+Imports: stringr, parallel
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
 Suggests: testthat
