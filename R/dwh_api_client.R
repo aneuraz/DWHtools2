@@ -37,7 +37,11 @@ api_query <- function(base_url,endpoint, token, query_body = list(), METHOD = ht
                   encode = "json",
                   body = query_body)
 
-  print(httr::http_status(r))
+  status = httr::http_status(r)
+
+  if (status$category != 'Success') {
+    stop(status$message)
+  }
 
   res <- httr::content(r, as = 'text')
   res <- jsonlite::fromJSON(res)
