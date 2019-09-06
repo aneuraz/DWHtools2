@@ -4,8 +4,8 @@
 \alias{api_match_patients}
 \title{api_match_patients}
 \usage{
-api_match_patients(base_url, token, num, num_type, annee_range, count_range,
-  n_match)
+api_match_patients(base_url, token, num, num_type, birth_range,
+  concepts_range, n_match, match_save = FALSE, match_save_title = NULL)
 }
 \description{
 api_match_patients

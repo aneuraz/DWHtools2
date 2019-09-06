@@ -4,7 +4,7 @@
 \alias{api_get_token}
 \title{api_get_token}
 \usage{
-api_get_token(base_url, login, pwd)
+api_get_token(base_url, username, password)
 }
 \arguments{
 \item{base_url:}{url for the api}

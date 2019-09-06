@@ -4,18 +4,22 @@
 #' @pwd
 #' @return jwt token
 #' @export
-api_get_token <- function(base_url, login, pwd) {
+api_get_token <- function(base_url, username, password) {
 
   r <- httr::POST(stringr::str_interp("${base_url}/login"),
-            encode = "form",
-            body = list(login = login, pwd=pwd))
+            encode = "json",
+            body = list(username = username, password=password))
+
+  status = httr::http_status(r)
+
+  if (status$category != 'Success') {
+    stop(status$message)
+  }
 
   res <- httr::content(r, as = 'text')
   res <- jsonlite::fromJSON(res)
-  if(class(res) == 'character') {
-    stop(stringr::str_interp('authentication failed: ${res}'))
-  }
-  res$id_token
+
+  res$access_token
 
 }
 
@@ -29,9 +33,11 @@ api_get_token <- function(base_url, login, pwd) {
 api_query <- function(base_url,endpoint, token, query_body = list(), METHOD = httr::POST) {
 
   r <- METHOD(stringr::str_interp("${base_url}/${endpoint}"),
-                  httr::add_headers(c(Authorization = token)),
+                  httr::add_headers(c(Authorization = stringr::str_interp("Bearer ${token}"))),
                   encode = "json",
                   body = query_body)
+
+  print(httr::http_status(r))
 
   res <- httr::content(r, as = 'text')
   res <- jsonlite::fromJSON(res)
@@ -41,13 +47,15 @@ api_query <- function(base_url,endpoint, token, query_body = list(), METHOD = ht
 
 #' api_match_patients
 #' @export
-api_match_patients <- function(base_url, token, num, num_type, annee_range, count_range, n_match) {
+api_match_patients <- function(base_url, token, num, num_type, birth_range, concepts_range, n_match, match_save=FALSE, match_save_title=NULL) {
 
-  api_query(base_url, "matchPatients",token, query_body = list(num = num,
+  api_query(base_url, "match_patients_from_num",token, query_body = list(num = num,
                                                                num_type = num_type,
-                                                               annee_range = annee_range,
-                                                               count_range = count_range,
-                                                               n_match = n_match) )
+                                                               birth_range = birth_range,
+                                                               concepts_range = concepts_range,
+                                                               n_match = n_match,
+                                                               match_save = match_save,
+                                                               match_save_title=match_save_title) )
 
 }
 
@@ -82,10 +90,8 @@ api_get_data <- function(base_url, token, num, num_type, data_type) {
 
   if (data_type == 'bio_num') {
     res %>% mutate(VAL_NUMERIC = as.numeric(stringr::str_replace(VAL_NUMERIC,',','.')),
-                   BORNE_SUP = as.numeric(stringr::str_replace(BORNE_SUP,'\\,','\\.')),
-                   BORNE_INF = as.numeric(stringr::str_replace(BORNE_INF,'\\,','\\.')),
-                   INF = as.numeric(INF),
-                   SUP = as.numeric(SUP))
+                   LOWER_BOUND = as.numeric(stringr::str_replace(LOWER_BOUND,'\\,','\\.')),
+                   UPPER_BOUND = as.numeric(stringr::str_replace(UPPER_BOUND,'\\,','\\.')))
   } else {
     res
   }
@@ -104,6 +110,6 @@ api_get_num_temps <- function(base_url, token) {
 #' @export
 api_get_cohorts <- function(base_url, token) {
 
-  res <- api_query(base_url,"cohorts", token, METHOD= httr::GET)
+  res <- api_query(base_url,"cohorts_list", token, query_body=list(only_num=FALSE))
 
 }

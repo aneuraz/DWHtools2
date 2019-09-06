@@ -4,9 +4,9 @@
 \alias{match_patients_from_num}
 \title{match_patients_from_num}
 \usage{
-match_patients_from_num(num = NULL, num_type = NULL, birth_range = NULL,
-  concepts_range = NULL, n_match = NULL, match_save = FALSE,
-  match_save_title = NULL, config = NULL)
+match_patients_from_num(num = NULL, num_type = NULL,
+  birth_range = NULL, concepts_range = NULL, n_match = NULL,
+  match_save = FALSE, match_save_title = NULL, config = NULL)
 }
 \arguments{
 \item{num}{the identifier of the cohort/num_temp}
